@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>RT-Viewer</title>
+    <link rel="stylesheet" href="./static/style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-math@0.1.9/dist/cornerstoneMath.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-core@2.6.1/dist/cornerstone.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cornerstone-tools@4.22.1/dist/cornerstoneTools.min.js"></script>
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+    <div id="consent-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; color:white; font-family:sans-serif; padding:20px; box-sizing:border-box;">
+    <div style="max-width:600px; background:#222; padding:40px; border-radius:10px; border:2px solid #f00; text-align:center;">
+        <h1 style="color:#ff4d4d; margin-top:0;">⚠️ WARNING: NOT FOR CLINICAL USE</h1>
+        <p style="text-align:left; line-height:1.6; font-size:14px;">
+            This tool (rt-viewer) is provided for <strong>EDUCATIONAL AND RESEARCH PURPOSES ONLY</strong>. 
+            It is a technical demonstration of DICOM-RT visualization in a web environment.
+        </p>
+        <ul style="text-align:left; font-size:13px; color:#ccc;">
+            <li>This software is NOT a medical device.</li>
+            <li>It has NOT been cleared by any regulatory authority (FDA, PMDA, etc.).</li>
+            <li>DO NOT use this for clinical diagnosis or treatment planning.</li>
+            <li>The developer assumes NO responsibility for any consequences arising from the use of this tool.</li>
+        </ul>
+        
+        <div style="margin:30px 0;">
+            <input type="checkbox" id="consent-check" style="transform:scale(1.5);">
+            <label for="consent-check" style="margin-left:10px; font-weight:bold;">
+                I understand and agree to the terms above.
+            </label>
+        </div>
+        
+        <button id="enter-btn" disabled style="padding:10px 30px; font-size:18px; background:#444; color:#888; border:none; border-radius:5px; cursor:not-allowed;">
+            Enter Viewer
+        </button>
+    </div>
+</div>
+
+<script>
+    const checkbox = document.getElementById('consent-check');
+    const button = document.getElementById('enter-btn');
+    const overlay = document.getElementById('consent-overlay');
+
+    // チェックボックスの状態に合わせてボタンを有効化
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            button.disabled = false;
+            button.style.background = '#d9534f';
+            button.style.color = 'white';
+            button.style.cursor = 'pointer';
+        } else {
+            button.disabled = true;
+            button.style.background = '#444';
+            button.style.color = '#888';
+            button.style.cursor = 'not-allowed';
+        }
+    });
+
+    // ボタンクリックでオーバーレイを消す
+    button.addEventListener('click', function() {
+        overlay.style.display = 'none';
+        // セッション中のみ同意を維持（タブを閉じたら再度警告）
+        sessionStorage.setItem('consent-agreed', 'true');
+    });
+
+    // すでに同意済みかチェック
+    if (sessionStorage.getItem('consent-agreed') === 'true') {
+        overlay.style.display = 'none';
+    }
+</script>
+
+    <div id="header">
+
+        <div class="ctrl-group">
+            <label>Local</label>
+            <button onclick="openLocalFolder()" class="btn-tool" style="background:#2196F3; color:white; font-weight:bold;">📂 Open</button>
+        </div>
+
+        <div class="ctrl-group">
+            <label>Case</label>
+            <select id="caseSelector"><option>Loading...</option></select>
+        </div>
+        <div class="ctrl-group">
+            <label>Slice: <span id="sliceInfo">0</span></label>
+            <input type="range" id="sliceSlider" min="0" value="0" style="width: 150px;">
+        </div>
+        
+        <div class="ctrl-group" style="border-left: 1px solid #555; padding-left: 10px; width: 340px;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+                <label>Dose Range</label>
+                <div class="unit-switch">
+                    <label><input type="radio" name="unit" id="unitGy" checked> Gy</label>
+                    <label><input type="radio" name="unit" id="unitPct"> %</label>
+                    <span style="margin-left:5px; color:#aaa; font-size:0.8em;">(100%=<input type="number" id="normDose" class="norm-input" value="60">Gy)</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; width: 100%; gap: 5px;">
+                <span class="val-display" id="dispMin" style="color: #4fc3f7;">10</span>
+                <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <input type="range" id="doseMin" min="0" max="80" step="1" value="10" style="width: 100%; margin: 2px 0;">
+                    <input type="range" id="doseMax" min="0" max="80" step="1" value="60" style="width: 100%; margin: 2px 0;">
+                </div>
+                <span class="val-display" id="dispMax" style="color: #ff5252;">60</span>
+            </div>
+        </div>
+        
+        <div class="ctrl-group">
+            <label>Opacity</label>
+            <input type="range" id="doseOpacity" min="0" max="1" step="0.1" value="0.7" style="width: 60px;">
+        </div>
+
+        <div class="ctrl-group" style="border-left: 1px solid #555; padding-left: 10px;">
+            <label>Preset</label>
+            <div style="display:flex; gap:2px;">
+                <button onclick="setWL(400,40)" class="btn-tool">Soft</button>
+                <button onclick="setWL(1500,-600)" class="btn-tool">Lung</button>
+                <button onclick="setWL(2000,300)" class="btn-tool">Bone</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingBarContainer"><div id="loadingBar"></div></div>
+
+    <div id="contentArea">
+        <div id="sidebar">
+            <div class="roi-section">
+                <div class="roi-section-header" id="roiHeaderLeft">Left Structures</div>
+                <div id="roiListLeft" class="roi-list"></div>
+            </div>
+            <div class="roi-section">
+                <div class="roi-section-header" id="roiHeaderRight">Right Structures</div>
+                <div id="roiListRight" class="roi-list"></div>
+            </div>
+        </div>
+
+        <div id="mainContainer">
+            <div id="viewLeft" class="viewport">
+                <div class="viewport-header">
+                    <span class="viewport-title" style="color:#4CAF50;">Left View</span>
+                    <span id="doseValLeft" class="dose-readout"></span>
+                    <div class="select-container">
+                        <select id="selStructLeft" title="Structure Set"><option value="">None</option></select>
+                        <select id="selDoseLeft" title="Dose Plan"><option value="">None</option></select>
+                    </div>
+                </div>
+                <div class="canvas-wrapper">
+                    <div id="dicomLeft" class="dicom-image" oncontextmenu="return false;"></div>
+                    <canvas id="doseCanvasLeft" class="dose-canvas"></canvas>
+                    <canvas id="structCanvasLeft" class="struct-canvas"></canvas>
+                </div>
+            </div>
+
+            <div id="viewRight" class="viewport">
+                <div class="viewport-header">
+                    <span class="viewport-title" style="color:#2196F3;">Right View</span>
+                    <span id="doseValRight" class="dose-readout"></span>
+                    <div class="select-container">
+                        <select id="selStructRight" title="Structure Set"><option value="">None</option></select>
+                        <select id="selDoseRight" title="Dose Plan"><option value="">None</option></select>
+                    </div>
+                </div>
+                <div class="canvas-wrapper">
+                    <div id="dicomRight" class="dicom-image" oncontextmenu="return false;"></div>
+                    <canvas id="doseCanvasRight" class="dose-canvas"></canvas>
+                    <canvas id="structCanvasRight" class="struct-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="credit">Data source: The Cancer Imaging Archive (TCIA)</div>
+    <script src="./static/script.js"></script>
+</body>
+</html>

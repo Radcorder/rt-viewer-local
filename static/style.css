@@ -1,0 +1,58 @@
+body { background: #111; color: #ccc; margin: 0; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+#header { background: #222; padding: 5px 10px; border-bottom: 1px solid #444; display: flex; gap: 15px; align-items: center; flex-shrink: 0; }
+.ctrl-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+label { font-size: 0.7em; color: #888; text-transform: uppercase; }
+select, input[type=number] { background: #333; color: #fff; border: 1px solid #555; padding: 2px; font-size: 0.9em; }
+.unit-switch { display: flex; gap: 5px; font-size: 0.8em; align-items: center; }
+.val-display { font-size: 0.9em; width: 35px; text-align: right; display: inline-block; font-weight: bold; }
+.btn-tool { background: #333; color: #ccc; border: 1px solid #555; cursor: pointer; font-size: 0.8em; padding: 2px 8px; }
+.btn-tool:hover { background: #555; color: #fff; }
+
+/* Loading Bar */
+#loadingBarContainer { width: 100%; height: 3px; background: #222; }
+#loadingBar { width: 0%; height: 100%; background: #4CAF50; transition: width 0.2s; }
+
+/* Layout */
+#contentArea { flex-grow: 1; display: flex; overflow: hidden; }
+#sidebar { width: 220px; background: #181818; border-right: 1px solid #333; display: flex; flex-direction: column; overflow-y: auto; }
+#mainContainer { flex-grow: 1; display: flex; position: relative; }
+
+/* ROI List */
+.roi-section-header { 
+    padding: 5px 10px; font-weight: bold; font-size: 0.8em; 
+    background: #252525; border-bottom: 1px solid #333; color: #eee;
+}
+#roiHeaderLeft { border-left: 3px solid #4CAF50; } 
+#roiHeaderRight { border-left: 3px solid #2196F3; }
+
+/* ALLボタンのスタイル */
+.btn-tiny {
+    background: #444; border: 1px solid #666; color: #ddd;
+    font-size: 0.85em; padding: 3px 6px; cursor: pointer; border-radius: 3px;
+}
+.btn-tiny:hover { background: #666; color: #fff; }
+.full-width { width: 100%; }
+
+.roi-list { padding: 5px; }
+.roi-item { display: flex; align-items: center; margin-bottom: 3px; cursor: pointer; font-size: 0.85em; color: #bbb; }
+.roi-item:hover { color: #fff; }
+.roi-color-box { width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; }
+.roi-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Viewports */
+.viewport { flex: 1; position: relative; border-left: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
+.viewport-header { position: absolute; top: 0; left: 0; right: 0; z-index: 20; background: rgba(0,0,0,0.7); padding: 4px 8px; display: flex; justify-content: space-between; align-items: center; }
+.viewport-title { font-weight: bold; font-size: 0.9em; }
+.dose-readout { margin-left: auto; margin-right: 15px; font-family: monospace; color: #ffeb3b; font-weight: bold; font-size: 1.1em; }
+.select-container { display: flex; gap: 5px; }
+.select-container select { max-width: 100px; font-size: 0.8em; }
+
+.canvas-wrapper { position: relative; flex-grow: 1; width: 100%; height: 100%; background: #000; }
+.dicom-image, .dose-canvas, .struct-canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.dose-canvas { z-index: 5; pointer-events: none; }
+.struct-canvas { z-index: 10; pointer-events: none; }
+.dicom-image { z-index: 1; }
+
+.credit { position: absolute; bottom: 5px; right: 10px; font-size: 0.7em; color: #444; pointer-events: none; z-index: 100; }
